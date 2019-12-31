@@ -10,23 +10,29 @@ import UIKit
 
 extension UIImage {
 
-    // @JARED Add attribution
+    // With gratitude: https://gist.github.com/schickling/b5d86cb070130f80bb40
     func withNormalizedOrientation() -> UIImage? {
-        guard imageOrientation != UIImage.Orientation.up else {
-            // This is default orientation, don't need to do anything
-            return self.copy() as? UIImage
-        }
 
-        guard let cgImage = self.cgImage else {
-            // CGImage is not available
-            return nil
-        }
+        // The .up orientation is the default; no changes are required.
+        guard imageOrientation != UIImage.Orientation.up else { return self }
 
-        guard let colorSpace = cgImage.colorSpace, let ctx = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: cgImage.bitsPerComponent, bytesPerRow: 0, space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
-            return nil // Not able to create CGContext
-        }
+        guard let cgImage = self.cgImage else { return nil }
+        guard let colorSpace = cgImage.colorSpace else { return nil }
+
+        let contextOrNil = CGContext(
+            data: nil,
+            width: Int(size.width),
+            height: Int(size.height),
+            bitsPerComponent: cgImage.bitsPerComponent,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+
+        guard let context = contextOrNil else { return nil }
 
         var transform: CGAffineTransform = CGAffineTransform.identity
+
+        // The docs specify the orientations that require a rotation...
 
         switch imageOrientation {
         case .down, .downMirrored:
@@ -44,7 +50,8 @@ extension UIImage {
             break
         }
 
-        // Flip image one more time if needed to, this is to prevent flipped image
+        // ...and also those that require a flip around an axis.
+
         switch imageOrientation {
         case .upMirrored, .downMirrored:
             transform = transform.translatedBy(x: size.width, y: 0)
@@ -58,18 +65,18 @@ extension UIImage {
             break
         }
 
-        ctx.concatenate(transform)
+        context.concatenate(transform)
 
         switch imageOrientation {
         case .left, .leftMirrored, .right, .rightMirrored:
-            ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: size.height, height: size.width))
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: size.height, height: size.width))
         default:
-            ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
+            context.draw(cgImage, in: CGRect(x: 0, y: 0, width: size.width, height: size.height))
             break
         }
 
-        guard let newCGImage = ctx.makeImage() else { return nil }
-        return UIImage.init(cgImage: newCGImage, scale: 1, orientation: .up)
+        guard let newCGImage = context.makeImage() else { return nil }
+        return UIImage(cgImage: newCGImage, scale: 1, orientation: .up)
     }
 
 }

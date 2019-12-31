@@ -21,7 +21,10 @@ public class CapturedPhoto {
 
     init?(capture: AVCapturePhoto, livePhotoFileURL: URL?, settings: AVCapturePhotoSettings) {
         guard let data = capture.fileDataRepresentation() else { return nil }
-        guard let image = UIImage(data: data) else { return nil }
+        guard let cgImage = capture.cgImageRepresentation() else { return nil }
+        guard let rawOrientation = capture.metadata[String(kCGImagePropertyOrientation)] as? UInt32 else { return nil }
+        guard let orientation = UIImage.Orientation(cgRaw: rawOrientation) else { return nil }
+        let image = UIImage(cgImage: cgImage.takeUnretainedValue(), scale: 1, orientation: orientation)
         self.capture = capture
         self.fileDataRepresentation = data
         self.livePhotoFileURL = livePhotoFileURL
@@ -29,9 +32,34 @@ public class CapturedPhoto {
         self.originalImage = image
         self.previewImage = {
             guard let preview = capture.previewCGImageRepresentation() else { return nil }
-            return UIImage(cgImage: preview.takeUnretainedValue())
+            return UIImage(cgImage: preview.takeUnretainedValue(), scale: 1, orientation: orientation)
         }()
     }
+}
+
+extension UIImage.Orientation {
+
+    init(orientation: CGImagePropertyOrientation) {
+        switch orientation {
+        case .up: self = .up
+        case .upMirrored: self = .upMirrored
+        case .down: self = .down
+        case .downMirrored: self = .downMirrored
+        case .left: self = .left
+        case .leftMirrored: self = .leftMirrored
+        case .right: self = .right
+        case .rightMirrored: self = .rightMirrored
+        }
+    }
+
+    init?(cgRaw raw: UInt32) {
+        if let cgOrientation = CGImagePropertyOrientation(rawValue: raw) {
+            self.init(orientation: cgOrientation)
+        } else {
+            return nil
+        }
+    }
+
 }
 
 // MARK: - Mode

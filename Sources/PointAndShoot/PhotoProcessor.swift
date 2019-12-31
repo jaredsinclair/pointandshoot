@@ -120,20 +120,19 @@ extension PhotoProcessor: AVCapturePhotoCaptureDelegate {
             return
         }
 
-        guard let data = capture.fileDataRepresentation() else {
-            ObligatoryLoggingPun.record("No photo data captured.")
-            finish(with: .failure(.noData))
-            return
+        DispatchQueue.global(qos: .userInitiated).async {
+            let capturedPhoto = CapturedPhoto(
+                capture: capture,
+                livePhotoFileURL: self.livePhotoCompanionMovieURL,
+                settings: self.settings
+            )
+            if let capture = capturedPhoto {
+                self.finish(with: .success(capture))
+            } else {
+                ObligatoryLoggingPun.record("Unable to extrapolate image resources.")
+                self.finish(with: .failure(.noData))
+            }
         }
-
-        let capturedPhoto = CapturedPhoto(
-            capture: capture,
-            fileDataRepresentation: data,
-            livePhotoFileURL: livePhotoCompanionMovieURL,
-            settings: settings
-        )
-
-        finish(with: .success(capturedPhoto))
     }
 
 }

@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import UIKit
 
 // MARK: - CapturedPhoto
 
@@ -15,12 +16,21 @@ public class CapturedPhoto {
     public let fileDataRepresentation: Data
     public let livePhotoFileURL: URL?
     public let settings: AVCapturePhotoSettings
+    public let originalImage: UIImage
+    public let previewImage: UIImage?
 
-    init(capture: AVCapturePhoto, fileDataRepresentation: Data, livePhotoFileURL: URL?, settings: AVCapturePhotoSettings) {
+    init?(capture: AVCapturePhoto, livePhotoFileURL: URL?, settings: AVCapturePhotoSettings) {
+        guard let data = capture.fileDataRepresentation() else { return nil }
+        guard let image = UIImage(data: data) else { return nil }
         self.capture = capture
-        self.fileDataRepresentation = fileDataRepresentation
+        self.fileDataRepresentation = data
         self.livePhotoFileURL = livePhotoFileURL
         self.settings = settings
+        self.originalImage = image
+        self.previewImage = {
+            guard let preview = capture.previewCGImageRepresentation() else { return nil }
+            return UIImage(cgImage: preview.takeUnretainedValue())
+        }()
     }
 }
 

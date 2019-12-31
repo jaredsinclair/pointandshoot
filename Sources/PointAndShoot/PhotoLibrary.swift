@@ -3,7 +3,7 @@
 //  PointAndShoot
 //
 //  Created by Jared Sinclair on 12/30/19.
-//  Copyright © 2019 Little Pie, LLC. All rights reserved.
+//  Copyright © 2019 Nice Boy, LLC. All rights reserved.
 //
 
 import Foundation

@@ -345,26 +345,30 @@ public final class CaptureSession: NSObject {
 
         let item = PhotoCaptureItem(settings: settings)
 
-        let processor = PhotoProcessor(settings: settings, callbackQueue: queue, uponWillCapture: { [weak self] in
-            self?.photoCaptureItems.append(item)
-        }, uponLivePhotoCaptureStateChange: { [weak self] isRecording in
-            self?.livePhotosInProgress += isRecording ? 1 : -1
-        }, uponIndeterminateProcessingChange: { isProcessing in
-            item.state = isProcessing ? .continuingIndeterminately : .finished
-        }, completion: { [weak self] (processor, result) in
-            guard let self = self else { return }
-            switch result {
-            case .success(let photo):
-                self.passthroughSubject.send(photo)
-            case .failure(let error):
-                ObligatoryLoggingPun.error("Failed to capture photo: \(error)")
-            }
-            if item.state != .finished {
-                item.state = .finished
-            }
-            self.photoCaptureItems.removeFirstInstance(of: item)
-            self.processors[processor.uniqueID] = nil
-        })
+        let processor = PhotoProcessor(
+            settings: settings,
+            userOrientation: overrideOrientation,
+            callbackQueue: queue,
+            uponWillCapture: { [weak self] in
+                self?.photoCaptureItems.append(item)
+            }, uponLivePhotoCaptureStateChange: { [weak self] isRecording in
+                self?.livePhotosInProgress += isRecording ? 1 : -1
+            }, uponIndeterminateProcessingChange: { isProcessing in
+                item.state = isProcessing ? .continuingIndeterminately : .finished
+            }, completion: { [weak self] (processor, result) in
+                guard let self = self else { return }
+                switch result {
+                case .success(let photo):
+                    self.passthroughSubject.send(photo)
+                case .failure(let error):
+                    ObligatoryLoggingPun.error("Failed to capture photo: \(error)")
+                }
+                if item.state != .finished {
+                    item.state = .finished
+                }
+                self.photoCaptureItems.removeFirstInstance(of: item)
+                self.processors[processor.uniqueID] = nil
+            })
 
         processors[processor.uniqueID] = processor
         photoOutput.capturePhoto(with: settings, delegate: processor)

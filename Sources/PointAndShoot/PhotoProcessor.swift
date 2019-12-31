@@ -3,7 +3,7 @@
 //  PointAndShoot
 //
 //  Created by Jared Sinclair on 12/30/19.
-//  Copyright © 2019 Little Pie, LLC. All rights reserved.
+//  Copyright © 2019 Nice Boy, LLC. All rights reserved.
 //
 
 import AVFoundation
@@ -21,6 +21,7 @@ final class PhotoProcessor: NSObject {
     var uniqueID: Int64 { settings.uniqueID }
 
     private let settings: AVCapturePhotoSettings
+    private let userOrientation: AVCaptureVideoOrientation
     private let callbackQueue: OperationQueue
     private let uponWillCapture: () -> Void
     private let uponLivePhotoCaptureStateChange: (Bool) -> Void
@@ -32,12 +33,14 @@ final class PhotoProcessor: NSObject {
     private lazy var context = CIContext()
 
     init(settings: AVCapturePhotoSettings,
+         userOrientation: AVCaptureVideoOrientation,
          callbackQueue: OperationQueue,
          uponWillCapture: @escaping () -> Void,
          uponLivePhotoCaptureStateChange: @escaping (_ isRecording: Bool) -> Void,
          uponIndeterminateProcessingChange: @escaping (_ isProcessing: Bool) -> Void,
          completion: @escaping (PhotoProcessor, Result<CapturedPhoto, Error>) -> Void) {
         self.settings = settings
+        self.userOrientation = userOrientation
         self.callbackQueue = callbackQueue
         self.uponWillCapture = uponWillCapture
         self.uponLivePhotoCaptureStateChange = uponLivePhotoCaptureStateChange
@@ -125,7 +128,8 @@ extension PhotoProcessor: AVCapturePhotoCaptureDelegate {
             let capturedPhoto = CapturedPhoto(
                 capture: capture,
                 livePhotoFileURL: self.livePhotoCompanionMovieURL,
-                settings: self.settings
+                settings: self.settings,
+                userOrientation: self.userOrientation
             )
             if let capture = capturedPhoto {
                 self.finish(with: .success(capture))

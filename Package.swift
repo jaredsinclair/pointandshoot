@@ -12,10 +12,13 @@ let package = Package(
             name: "PointAndShoot",
             targets: ["PointAndShoot"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/jaredsinclair/etcetera.git", .branch("master")),
+    ],
     targets: [
         .target(
             name: "PointAndShoot",
-            dependencies: []),
+            dependencies: ["Etcetera"]),
         .testTarget(
             name: "PointAndShootTests",
             dependencies: ["PointAndShoot"]),

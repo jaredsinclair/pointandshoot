@@ -9,6 +9,7 @@
 import AVFoundation
 import Combine
 import UIKit
+import Etcetera
 
 final class PreviewViewController: UIViewController {
 
@@ -49,7 +50,7 @@ final class PreviewViewController: UIViewController {
     private func updateOrientation() {
         guard let orientation = UIDevice.current.videoPreviewOrientation else { return }
         guard supportedOrientations.contains(orientation) else {
-            ObligatoryLoggingPun.record("Unsupported orientation will be ignored: \(orientation.pointAndShootDescription)")
+            ObligatoryLoggingPun.error("Unsupported orientation will be ignored: \(orientation.pointAndShootDescription)")
             return
         }
         previewView.previewLayer.connection?.videoOrientation = orientation

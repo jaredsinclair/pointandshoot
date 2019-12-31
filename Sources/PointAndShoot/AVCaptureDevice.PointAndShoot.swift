@@ -7,6 +7,7 @@
 //
 
 import AVFoundation
+import Etcetera
 
 extension AVCaptureDevice {
 
@@ -27,7 +28,7 @@ extension AVCaptureDevice {
             isSubjectAreaChangeMonitoringEnabled = monitorSubjectAreaChanges
             unlockForConfiguration()
         } catch {
-            ObligatoryLoggingPun.record("Could not lock device for configuration: \(error)")
+            ObligatoryLoggingPun.error("Could not lock device for configuration: \(error)")
         }
     }
 

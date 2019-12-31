@@ -9,6 +9,7 @@
 import AVFoundation
 import Photos
 import os.log
+import Etcetera
 
 final class PhotoProcessor: NSObject {
 
@@ -87,7 +88,7 @@ extension PhotoProcessor: AVCapturePhotoCaptureDelegate {
         }
 
         if let error = error {
-            ObligatoryLoggingPun.record("Error capturing photo: \(error)")
+            ObligatoryLoggingPun.error("Error capturing photo: \(error)")
         } else {
             capture = photo
         }
@@ -101,7 +102,7 @@ extension PhotoProcessor: AVCapturePhotoCaptureDelegate {
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingLivePhotoToMovieFileAt outputFileURL: URL, duration: CMTime, photoDisplayTime: CMTime, resolvedSettings: AVCaptureResolvedPhotoSettings, error: Swift.Error?) {
         if error != nil {
-            ObligatoryLoggingPun.record("Error processing Live Photo companion movie: \(String(describing: error))")
+            ObligatoryLoggingPun.error("Error processing Live Photo companion movie: \(String(describing: error))")
             return
         }
         livePhotoCompanionMovieURL = outputFileURL
@@ -109,13 +110,13 @@ extension PhotoProcessor: AVCapturePhotoCaptureDelegate {
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Swift.Error?) {
         if let error = error {
-            ObligatoryLoggingPun.record("Error capturing photo: \(error)")
+            ObligatoryLoggingPun.error("Error capturing photo: \(error)")
             finish(with: .failure(.avFoundation(error)))
             return
         }
 
         guard let capture = capture else {
-            ObligatoryLoggingPun.record("No photo data captured.")
+            ObligatoryLoggingPun.error("No photo data captured.")
             finish(with: .failure(.noData))
             return
         }
@@ -129,7 +130,7 @@ extension PhotoProcessor: AVCapturePhotoCaptureDelegate {
             if let capture = capturedPhoto {
                 self.finish(with: .success(capture))
             } else {
-                ObligatoryLoggingPun.record("Unable to extrapolate image resources.")
+                ObligatoryLoggingPun.error("Unable to extrapolate image resources.")
                 self.finish(with: .failure(.noData))
             }
         }

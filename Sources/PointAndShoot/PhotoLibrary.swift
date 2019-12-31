@@ -8,6 +8,7 @@
 
 import Foundation
 import Photos
+import Etcetera
 
 extension PHPhotoLibrary {
 
@@ -32,11 +33,11 @@ extension PHPhotoLibrary {
                     }
                 }, completionHandler: { _, error in
                     if let error = error {
-                        ObligatoryLoggingPun.record("Error occurred while saving photo to photo library: \(error)")
+                        ObligatoryLoggingPun.error("Error occurred while saving photo to photo library: \(error)")
                     }
                 })
             } else {
-                ObligatoryLoggingPun.record("Error occurred while saving photo to photo library: unauthorized.")
+                ObligatoryLoggingPun.error("Error occurred while saving photo to photo library: unauthorized.")
             }
         }
     }

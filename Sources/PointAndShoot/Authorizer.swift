@@ -8,6 +8,7 @@
 
 import Foundation
 import AVFoundation
+import Etcetera
 
 class Authorizer {
 

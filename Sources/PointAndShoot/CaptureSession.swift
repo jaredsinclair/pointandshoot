@@ -9,6 +9,7 @@
 import AVFoundation
 import Combine
 import UIKit
+import Etcetera
 
 public final class CaptureSession: NSObject {
 
@@ -358,7 +359,7 @@ public final class CaptureSession: NSObject {
             case .success(let photo):
                 self.passthroughSubject.send(photo)
             case .failure(let error):
-                ObligatoryLoggingPun.record("Failed to capture photo: \(error)")
+                ObligatoryLoggingPun.error("Failed to capture photo: \(error)")
             }
             if item.state != .finished {
                 item.state = .finished
@@ -392,7 +393,7 @@ public final class CaptureSession: NSObject {
         do {
             try addVideoInput_queued(videoDevice: nextCamera)
         } catch {
-            ObligatoryLoggingPun.record("Unable to toggle cameras: \(error)")
+            ObligatoryLoggingPun.error("Unable to toggle cameras: \(error)")
             bodyPosition = .back
         }
     }

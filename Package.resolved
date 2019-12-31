@@ -2,11 +2,29 @@
   "object": {
     "pins": [
       {
+        "package": "CircularBuffer",
+        "repositoryURL": "https://github.com/jaredsinclair/CircularBuffer",
+        "state": {
+          "branch": null,
+          "revision": "d9e78a3981ad14de6368e64ef9cb27105926f346",
+          "version": "1.0.0"
+        }
+      },
+      {
         "package": "Etcetera",
         "repositoryURL": "https://github.com/jaredsinclair/etcetera.git",
         "state": {
+          "branch": "develop",
+          "revision": "083f81931298f2301548f1eba0fe281576fcb883",
+          "version": null
+        }
+      },
+      {
+        "package": "OrientationObserver",
+        "repositoryURL": "https://github.com/jaredsinclair/OrientationObserver",
+        "state": {
           "branch": "master",
-          "revision": "d948f92d696db3ee61c2fcdfe8ed0c828fc7ad62",
+          "revision": "4629571cc63bb332d5972e6f29b5166f815aeedb",
           "version": null
         }
       }

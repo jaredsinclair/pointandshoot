@@ -30,6 +30,7 @@ public final class CaptureSession: NSObject {
     @Published public private(set) var configurationError: ConfigurationError?
     @Published public private(set) var livePhotos: Toggle?
     @Published public private(set) var flash: AutoToggle?
+    @Published public private(set) var dimensions: CMVideoDimensions?
     @Published public private(set) var sessionInterruption: SessionInterruption?
 
     // MARK: - Private Properties
@@ -208,6 +209,14 @@ public final class CaptureSession: NSObject {
         case .photo: try addPhotoOutput_queued()
         case .video: try addVideoOutput_queued()
         }
+
+        NotificationCenter.default
+            .publisher(for: .AVCaptureInputPortFormatDescriptionDidChange)
+            .receive(on: queue)
+            .sink { [weak self] _ in
+                self?.inputPortFormatDescriptionChanged_queued()
+            }
+            .store(in: &sessionSubscriptions)
 
         NotificationCenter.default
             .publisher(for: .AVCaptureSessionWasInterrupted)
@@ -420,6 +429,14 @@ public final class CaptureSession: NSObject {
             exposure: .continuousAutoExposure,
             monitorSubjectAreaChanges: false
         )
+    }
+
+    // MARK: - Private Methods (Format Changes)
+
+    private func inputPortFormatDescriptionChanged_queued() {
+        assert(queue.isCurrent)
+        guard let format = currentInput?.ports.first?.formatDescription else { return }
+        dimensions = CMVideoFormatDescriptionGetDimensions(format)
     }
 
     // MARK: - Private Methods (Session Interruptions)

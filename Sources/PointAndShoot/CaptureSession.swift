@@ -326,14 +326,12 @@ public final class CaptureSession: NSObject {
 
     // MARK: - Private Methods (Photo Capture)
 
-    private func capturePhoto_queued(overrideOrientation: AVCaptureVideoOrientation?) {
+    private func capturePhoto_queued(overrideOrientation: AVCaptureVideoOrientation) {
         assert(queue.isCurrent)
 
         guard let camera = currentCamera else { return }
 
-        if let orientation = overrideOrientation {
-            photoOutput.connection(with: .video)?.videoOrientation = orientation
-        }
+        photoOutput.connection(with: .video)?.videoOrientation = overrideOrientation
 
         let options = AVCapturePhotoSettings.Options(
             livePhotos: livePhotos,

@@ -11,9 +11,15 @@ import UIKit
 
 extension UIDevice {
 
-    var videoPreviewOrientation: AVCaptureVideoOrientation? {
-        guard orientation.isPortrait || orientation.isLandscape else { return nil }
-        return AVCaptureVideoOrientation(deviceOrientation: orientation)
+    var videoPreviewOrientation: AVCaptureVideoOrientation {
+        switch orientation {
+        case .portrait: return .portrait
+        case .portraitUpsideDown: return .portraitUpsideDown
+        case .landscapeLeft: return .landscapeLeft
+        case .landscapeRight: return .landscapeRight
+        case .faceUp, .faceDown, .unknown: return .portrait
+        @unknown default: return .portrait
+        }
     }
 
 }

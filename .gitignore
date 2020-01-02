@@ -54,6 +54,8 @@ playground.xcworkspace
 # .swiftpm
 .build/
 
+SampleProject/SampleProject.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/*
+
 
 # CocoaPods
 #

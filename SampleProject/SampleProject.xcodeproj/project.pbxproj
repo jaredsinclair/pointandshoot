@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -13,6 +13,7 @@
 		7F7C537923BEA7B200329A58 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7F7C537723BEA7B200329A58 /* Main.storyboard */; };
 		7F7C537B23BEA7B400329A58 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7F7C537A23BEA7B400329A58 /* Assets.xcassets */; };
 		7F7C537E23BEA7B400329A58 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7F7C537C23BEA7B400329A58 /* LaunchScreen.storyboard */; };
+		7F7C538723BEA80400329A58 /* PointAndShoot in Frameworks */ = {isa = PBXBuildFile; productRef = 7F7C538623BEA80400329A58 /* PointAndShoot */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7F7C538723BEA80400329A58 /* PointAndShoot in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,6 +85,9 @@
 			dependencies = (
 			);
 			name = SampleProject;
+			packageProductDependencies = (
+				7F7C538623BEA80400329A58 /* PointAndShoot */,
+			);
 			productName = SampleProject;
 			productReference = 7F7C536E23BEA7B200329A58 /* SampleProject.app */;
 			productType = "com.apple.product-type.application";
@@ -111,6 +116,9 @@
 				Base,
 			);
 			mainGroup = 7F7C536523BEA7B200329A58;
+			packageReferences = (
+				7F7C538523BEA80400329A58 /* XCRemoteSwiftPackageReference "pointandshoot" */,
+			);
 			productRefGroup = 7F7C536F23BEA7B200329A58 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -338,6 +346,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7F7C538523BEA80400329A58 /* XCRemoteSwiftPackageReference "pointandshoot" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jaredsinclair/pointandshoot";
+			requirement = {
+				branch = develop;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7F7C538623BEA80400329A58 /* PointAndShoot */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7F7C538523BEA80400329A58 /* XCRemoteSwiftPackageReference "pointandshoot" */;
+			productName = PointAndShoot;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7F7C536623BEA7B200329A58 /* Project object */;
 }

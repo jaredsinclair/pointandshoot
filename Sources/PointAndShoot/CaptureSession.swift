@@ -10,6 +10,7 @@ import AVFoundation
 import Combine
 import UIKit
 import Etcetera
+import OrientationObserver
 
 public final class CaptureSession: NSObject {
 
@@ -43,15 +44,19 @@ public final class CaptureSession: NSObject {
     private let backCameraDiscovery: AVCaptureDevice.DiscoverySession
     private let photoOutput = AVCapturePhotoOutput()
     private let passthroughSubject: PassthroughSubject<CapturedPhoto, Never>
+    private let orientationObserver: OrientationObserver
     private var processors: [Int64: PhotoProcessor] = [:]
     private var currentInput: AVCaptureDeviceInput?
     private var currentCameraSubscriptions = Set<AnyCancellable>()
     private var sessionSubscriptions = Set<AnyCancellable>()
+    private var lifetimeSubscriptions = Set<AnyCancellable>()
+    private var interfaceOrientation: UIInterfaceOrientation
 
     // MARK: - Init / Deinit
 
     public init(options: Options = .default) {
         precondition(!options.modes.isEmpty, "You must provide at least one mode.")
+        precondition(!options.interfaceOrientations.isEmpty, "You must provide at least one supported interface orientation.")
         self.options = options
         mode = options.modes.first!
         preview = PreviewViewController(supportedOrientations: options.interfaceOrientations)
@@ -68,7 +73,16 @@ public final class CaptureSession: NSObject {
             mediaType: .video,
             position: .back
         )
+        orientationObserver = OrientationObserver(
+            applicationMotionManager: options.applicationMotionManager
+        )
+        interfaceOrientation = options.interfaceOrientations.first!
         super.init()
+        orientationObserver
+            .receive(on: queue)
+            .filter { options.interfaceOrientations.contains($0) }
+            .assign(to: \.interfaceOrientation, on: self)
+            .store(in: &lifetimeSubscriptions)
         availableFrontCameras = frontCameraDiscovery.devices.compactMap { $0.cameraType }
         availableBackCameras = backCameraDiscovery.devices.compactMap { $0.cameraType }
     }
@@ -77,7 +91,7 @@ public final class CaptureSession: NSObject {
 
     public func start() {
         assert(OperationQueue.isMain)
-
+        orientationObserver.start()
         if authorizer.existingAuthorization.isFullyAuthorized {
             authorizationCheckPassed()
         } else {
@@ -96,6 +110,7 @@ public final class CaptureSession: NSObject {
     }
 
     public func stop() {
+        orientationObserver.stop()
         queue.asap {
             self.sessionSubscriptions.removeAll()
             self.currentCameraSubscriptions.removeAll()
@@ -153,9 +168,8 @@ public final class CaptureSession: NSObject {
 
     public func capturePhoto() {
         assert(OperationQueue.isMain)
-        let orientation = UIDevice.current.videoPreviewOrientation
         queue.addOperation { [weak self] in
-            self?.capturePhoto_queued(overrideOrientation: orientation)
+            self?.capturePhoto_queued()
         }
     }
 
@@ -335,12 +349,13 @@ public final class CaptureSession: NSObject {
 
     // MARK: - Private Methods (Photo Capture)
 
-    private func capturePhoto_queued(overrideOrientation: AVCaptureVideoOrientation) {
+    private func capturePhoto_queued() {
         assert(queue.isCurrent)
 
         guard let camera = currentCamera else { return }
 
-        photoOutput.connection(with: .video)?.videoOrientation = overrideOrientation
+        let videoOrientation = interfaceOrientation.videoOrientation
+        photoOutput.connection(with: .video)?.videoOrientation = videoOrientation
 
         let options = AVCapturePhotoSettings.Options(
             livePhotos: livePhotos,
@@ -356,7 +371,7 @@ public final class CaptureSession: NSObject {
 
         let processor = PhotoProcessor(
             settings: settings,
-            userOrientation: overrideOrientation,
+            userOrientation: videoOrientation,
             callbackQueue: queue,
             uponWillCapture: { [weak self] in
                 self?.photoCaptureItems.append(item)

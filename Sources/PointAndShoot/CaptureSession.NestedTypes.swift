@@ -9,6 +9,7 @@
 import AVFoundation
 import Combine
 import UIKit
+import CoreMotion
 
 extension CaptureSession {
 
@@ -19,6 +20,7 @@ extension CaptureSession {
         public let preferredBackCameras: [Camera]
         public let autoEnableLivePhotosIfAvailable: Bool
         public let preferredInitialFlashMode: AutoToggle
+        public let applicationMotionManager: CMMotionManager?
 
         public static let `default` = Options()
 
@@ -28,7 +30,8 @@ extension CaptureSession {
             preferredFrontCameras: [Camera] = Camera.defaultFrontPreferences,
             preferredBackCameras: [Camera] = Camera.defaultBackPreferences,
             autoEnableLivePhotosIfAvailable: Bool = true,
-            preferredInitialFlashMode: AutoToggle = .off
+            preferredInitialFlashMode: AutoToggle = .off,
+            applicationMotionManager: CMMotionManager? = nil
         ) {
             self.modes = modes
             self.interfaceOrientations = interfaceOrientations
@@ -36,6 +39,7 @@ extension CaptureSession {
             self.preferredBackCameras = preferredBackCameras
             self.autoEnableLivePhotosIfAvailable = autoEnableLivePhotosIfAvailable
             self.preferredInitialFlashMode = preferredInitialFlashMode
+            self.applicationMotionManager = applicationMotionManager
         }
     }
 

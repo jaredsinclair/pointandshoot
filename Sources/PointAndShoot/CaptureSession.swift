@@ -50,7 +50,7 @@ public final class CaptureSession: NSObject {
     private var currentCameraSubscriptions = Set<AnyCancellable>()
     private var sessionSubscriptions = Set<AnyCancellable>()
     private var lifetimeSubscriptions = Set<AnyCancellable>()
-    private var interfaceOrientation: UIInterfaceOrientation
+    private var videoOrientation: AVCaptureVideoOrientation = .portrait
 
     // MARK: - Init / Deinit
 
@@ -76,12 +76,11 @@ public final class CaptureSession: NSObject {
         orientationObserver = OrientationObserver(
             applicationMotionManager: options.applicationMotionManager
         )
-        interfaceOrientation = options.interfaceOrientations.first!
         super.init()
         orientationObserver
             .receive(on: queue)
-            .filter { options.interfaceOrientations.contains($0) }
-            .assign(to: \.interfaceOrientation, on: self)
+            .map { $0.videoOrientation }
+            .assign(to: \.videoOrientation, on: self)
             .store(in: &lifetimeSubscriptions)
         availableFrontCameras = frontCameraDiscovery.devices.compactMap { $0.cameraType }
         availableBackCameras = backCameraDiscovery.devices.compactMap { $0.cameraType }
@@ -354,7 +353,6 @@ public final class CaptureSession: NSObject {
 
         guard let camera = currentCamera else { return }
 
-        let videoOrientation = interfaceOrientation.videoOrientation
         photoOutput.connection(with: .video)?.videoOrientation = videoOrientation
 
         let options = AVCapturePhotoSettings.Options(

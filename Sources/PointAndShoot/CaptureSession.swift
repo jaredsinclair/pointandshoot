@@ -33,6 +33,7 @@ public final class CaptureSession: NSObject {
     @Published public private(set) var flash: AutoToggle?
     @Published public private(set) var dimensions: CMVideoDimensions?
     @Published public private(set) var sessionInterruption: SessionInterruption?
+    @Published public private(set) var videoOrientation: AVCaptureVideoOrientation = .portrait
 
     // MARK: - Private Properties
 
@@ -50,7 +51,6 @@ public final class CaptureSession: NSObject {
     private var currentCameraSubscriptions = Set<AnyCancellable>()
     private var sessionSubscriptions = Set<AnyCancellable>()
     private var lifetimeSubscriptions = Set<AnyCancellable>()
-    private var videoOrientation: AVCaptureVideoOrientation = .portrait
 
     // MARK: - Init / Deinit
 

@@ -45,7 +45,7 @@ extension CaptureSession {
 
     public final class PhotoCaptureItem {
         public let id: Int64
-        public internal(set) var state: PhotoCaptureState
+        @Published public internal(set) var state: PhotoCaptureState
 
         internal init(settings: AVCapturePhotoSettings) {
             id = settings.uniqueID

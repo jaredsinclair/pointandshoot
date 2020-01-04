@@ -17,7 +17,7 @@ public final class CaptureSession: NSObject {
     // MARK: - Public Properties (Constant)
 
     public let preview: UIViewController
-    public let publisher: AnyPublisher<CapturedPhoto, Never>
+    public let photoPublisher: AnyPublisher<CapturedPhoto, Never>
 
     // MARK: - Public Properties (Published)
 
@@ -62,7 +62,7 @@ public final class CaptureSession: NSObject {
         preview = PreviewViewController(supportedOrientations: options.interfaceOrientations)
         let subject = PassthroughSubject<CapturedPhoto, Never>()
         passthroughSubject = subject
-        publisher = passthroughSubject.eraseToAnyPublisher()
+        photoPublisher = passthroughSubject.eraseToAnyPublisher()
         frontCameraDiscovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: options.preferredFrontCameras.map(\.deviceType),
             mediaType: .video,

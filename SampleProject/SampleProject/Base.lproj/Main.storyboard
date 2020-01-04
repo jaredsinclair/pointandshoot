@@ -69,6 +69,9 @@
                                         <state key="normal" title="PAUSE">
                                             <color key="titleColor" systemColor="systemPinkColor" red="1" green="0.1764705882" blue="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                         </state>
+                                        <state key="disabled">
+                                            <color key="titleColor" red="1" green="1" blue="1" alpha="0.25123073630136988" colorSpace="custom" customColorSpace="displayP3"/>
+                                        </state>
                                         <connections>
                                             <action selector="pause:" destination="QpE-c5-KMi" eventType="touchUpInside" id="HfM-GK-jy6"/>
                                         </connections>
@@ -77,6 +80,9 @@
                                         <rect key="frame" x="128" y="0.0" width="60" height="30"/>
                                         <state key="normal" title="RESUME">
                                             <color key="titleColor" systemColor="systemGreenColor" red="0.20392156859999999" green="0.78039215689999997" blue="0.34901960780000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <state key="disabled">
+                                            <color key="titleColor" red="1" green="1" blue="1" alpha="0.25123073630136988" colorSpace="custom" customColorSpace="displayP3"/>
                                         </state>
                                         <connections>
                                             <action selector="resume:" destination="QpE-c5-KMi" eventType="touchUpInside" id="9o6-XC-SxN"/>

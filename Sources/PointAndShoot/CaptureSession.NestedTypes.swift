@@ -66,6 +66,7 @@ extension CaptureSession {
         case unableToAddVideoInput(Swift.Error?)
         case unableToAddAudioInput(Swift.Error?)
         case unableToAddPhotoOutput(Swift.Error?)
+        case runtimeError(Swift.Error?)
     }
 
     public struct SessionInterruption {

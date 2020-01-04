@@ -18,17 +18,17 @@ public final class CaptureSession: NSObject {
 
     public let preview: UIViewController
     public let photoPublisher: AnyPublisher<CapturedPhoto, Never>
+    public let availableFrontCameras: [Camera]
+    public let availableBackCameras: [Camera]
 
     // MARK: - Public Properties (Published)
 
     @Published public private(set) var mode: Mode
     @Published public private(set) var photoCaptureItems: [PhotoCaptureItem] = []
     @Published public private(set) var livePhotosInProgress: Int = 0
-    @Published public private(set) var availableFrontCameras: [Camera] = []
-    @Published public private(set) var availableBackCameras: [Camera] = []
     @Published public private(set) var bodyPosition: BodyPosition = .back
     @Published public private(set) var currentCamera: AVCaptureDevice?
-    @Published public private(set) var configurationError: ConfigurationError?
+    @Published public private(set) var configurationResult: Result<Void, ConfigurationError>?
     @Published public private(set) var livePhotos: Toggle?
     @Published public private(set) var flash: AutoToggle?
     @Published public private(set) var dimensions: CMVideoDimensions?
@@ -63,27 +63,38 @@ public final class CaptureSession: NSObject {
         let subject = PassthroughSubject<CapturedPhoto, Never>()
         passthroughSubject = subject
         photoPublisher = passthroughSubject.eraseToAnyPublisher()
-        frontCameraDiscovery = AVCaptureDevice.DiscoverySession(
+        let frontCameraDiscovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: options.preferredFrontCameras.map(\.deviceType),
             mediaType: .video,
             position: .front
         )
-        backCameraDiscovery = AVCaptureDevice.DiscoverySession(
+        let backCameraDiscovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: options.preferredBackCameras.map(\.deviceType),
             mediaType: .video,
             position: .back
         )
+        self.frontCameraDiscovery = frontCameraDiscovery
+        self.backCameraDiscovery = backCameraDiscovery
+        availableFrontCameras = frontCameraDiscovery.devices.compactMap { $0.cameraType }
+        availableBackCameras = backCameraDiscovery.devices.compactMap { $0.cameraType }
+
         orientationObserver = OrientationObserver(
             applicationMotionManager: options.applicationMotionManager
         )
         super.init()
+
         orientationObserver
             .receive(on: queue)
             .map { $0.videoOrientation }
             .assign(to: \.videoOrientation, on: self)
             .store(in: &lifetimeSubscriptions)
-        availableFrontCameras = frontCameraDiscovery.devices.compactMap { $0.cameraType }
-        availableBackCameras = backCameraDiscovery.devices.compactMap { $0.cameraType }
+
+        NotificationCenter.default
+            .publisher(for: .AVCaptureSessionRuntimeError, object: session)
+            .receive(on: queue)
+            .sink { [weak self] note in self?.handleRuntimeError_queued(note) }
+            .store(in: &lifetimeSubscriptions)
+
     }
 
     // MARK: - Public Methods
@@ -98,24 +109,32 @@ public final class CaptureSession: NSObject {
                 if updatedAuthorization.isFullyAuthorized {
                     self?.authorizationCheckPassed()
                 } else {
-                    self?.configurationError = .unauthorized
+                    self?.configurationResult = .failure(.unauthorized)
                 }
             }
         }
     }
 
+    public func pause() {
+        orientationObserver.stop()
+        queue.asap {
+            guard case .success = self.configurationResult else { return }
+            self.session.stopRunning()
+        }
+    }
+
     public func resume() {
-        // stuf
+        orientationObserver.start()
+        queue.asap {
+            guard case .success = self.configurationResult else { return }
+            self.session.startRunning()
+        }
     }
 
     public func stop() {
         orientationObserver.stop()
         queue.asap {
-            self.sessionSubscriptions.removeAll()
-            self.currentCameraSubscriptions.removeAll()
-            self.currentCamera = nil
-            self.currentInput = nil
-            self.session.stopRunning()
+            self.wipeSessionState_queued(configurationResult: nil)
         }
     }
 
@@ -181,11 +200,16 @@ public final class CaptureSession: NSObject {
 
         queue.addOperation { [weak self] in
             guard let self = self else { return }
+            if case .success = self.configurationResult {
+                assertionFailure("Must not call `start` on a session that's already running.")
+                return
+            }
             do {
                 try self.performInitialSessionConfiguration_queued()
+                self.configurationResult = .success(())
                 self.session.startRunning()
             } catch {
-                self.configurationError = (error as! ConfigurationError)
+                self.configurationResult = .failure(error as! ConfigurationError)
             }
         }
     }
@@ -244,6 +268,7 @@ public final class CaptureSession: NSObject {
             .receive(on: queue)
             .sink { [weak self] _ in self?.sessionInterruptionEnded_queued() }
             .store(in: &sessionSubscriptions)
+
     }
 
     /// - throws: ConfigurationError
@@ -461,6 +486,32 @@ public final class CaptureSession: NSObject {
 
     private func sessionInterruptionEnded_queued() {
         assert(queue.isCurrent)
+        sessionInterruption = nil
+    }
+
+    // MARK: - Private Methods (Runtime Errors)
+
+    private func handleRuntimeError_queued(_ notification: Notification) {
+        assert(queue.isCurrent)
+        let error = notification.userInfo?[AVCaptureSessionErrorKey] as? Error
+        wipeSessionState_queued(configurationResult: .failure(.runtimeError(error)))
+    }
+
+    private func wipeSessionState_queued(configurationResult result: Result<Void, ConfigurationError>?) {
+        if session.isRunning {
+            session.stopRunning()
+        }
+        configurationResult = result
+        sessionSubscriptions.removeAll()
+        currentCameraSubscriptions.removeAll()
+        currentCamera = nil
+        currentInput = nil
+        livePhotosInProgress = 0
+        photoCaptureItems.removeAll()
+        bodyPosition = .back
+        flash = nil
+        livePhotos = nil
+        dimensions = nil
         sessionInterruption = nil
     }
 

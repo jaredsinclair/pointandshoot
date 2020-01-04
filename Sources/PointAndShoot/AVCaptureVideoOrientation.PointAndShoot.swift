@@ -6,8 +6,6 @@
 //  Copyright © 2019 Nice Boy, LLC. All rights reserved.
 //
 
-// Remove me!
-
 import AVFoundation
 import UIKit
 

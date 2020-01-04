@@ -9,6 +9,7 @@
 import AVFoundation
 import Combine
 import UIKit
+import CoreMotion
 
 extension CaptureSession {
 
@@ -19,6 +20,7 @@ extension CaptureSession {
         public let preferredBackCameras: [Camera]
         public let autoEnableLivePhotosIfAvailable: Bool
         public let preferredInitialFlashMode: AutoToggle
+        public let applicationMotionManager: CMMotionManager?
 
         public static let `default` = Options()
 
@@ -28,7 +30,8 @@ extension CaptureSession {
             preferredFrontCameras: [Camera] = Camera.defaultFrontPreferences,
             preferredBackCameras: [Camera] = Camera.defaultBackPreferences,
             autoEnableLivePhotosIfAvailable: Bool = true,
-            preferredInitialFlashMode: AutoToggle = .off
+            preferredInitialFlashMode: AutoToggle = .off,
+            applicationMotionManager: CMMotionManager? = nil
         ) {
             self.modes = modes
             self.interfaceOrientations = interfaceOrientations
@@ -36,12 +39,13 @@ extension CaptureSession {
             self.preferredBackCameras = preferredBackCameras
             self.autoEnableLivePhotosIfAvailable = autoEnableLivePhotosIfAvailable
             self.preferredInitialFlashMode = preferredInitialFlashMode
+            self.applicationMotionManager = applicationMotionManager
         }
     }
 
     public final class PhotoCaptureItem {
         public let id: Int64
-        public internal(set) var state: PhotoCaptureState
+        @Published public internal(set) var state: PhotoCaptureState
 
         internal init(settings: AVCapturePhotoSettings) {
             id = settings.uniqueID
@@ -55,13 +59,22 @@ extension CaptureSession {
         case finished
     }
 
-    public enum ConfigurationError: Swift.Error {
+    public enum SessionState {
+        case idle
+        case starting
+        case running
+        case paused
+        case error(SessionError)
+    }
+
+    public enum SessionError: Swift.Error {
         case unauthorized
         case noCameraFound
         case noMicrophoneFound
         case unableToAddVideoInput(Swift.Error?)
         case unableToAddAudioInput(Swift.Error?)
         case unableToAddPhotoOutput(Swift.Error?)
+        case runtimeError(Swift.Error?)
     }
 
     public struct SessionInterruption {

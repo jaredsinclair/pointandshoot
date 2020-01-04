@@ -14,11 +14,14 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/jaredsinclair/etcetera.git", .branch("master")),
+        .package(url: "https://github.com/jaredsinclair/OrientationObserver", .branch("master")),
     ],
     targets: [
         .target(
             name: "PointAndShoot",
-            dependencies: ["Etcetera"]),
+            dependencies: [
+                "OrientationObserver",
+                "Etcetera"]),
         .testTarget(
             name: "PointAndShootTests",
             dependencies: ["PointAndShoot"]),

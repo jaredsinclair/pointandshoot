@@ -10,27 +10,30 @@ import AVFoundation
 import Combine
 import UIKit
 import Etcetera
+import OrientationObserver
 
 public final class CaptureSession: NSObject {
 
     // MARK: - Public Properties (Constant)
 
     public let preview: UIViewController
-    public let publisher: AnyPublisher<CapturedPhoto, Never>
+    public let photoPublisher: AnyPublisher<CapturedPhoto, Never>
+    public let availableFrontCameras: [Camera]
+    public let availableBackCameras: [Camera]
 
     // MARK: - Public Properties (Published)
 
     @Published public private(set) var mode: Mode
     @Published public private(set) var photoCaptureItems: [PhotoCaptureItem] = []
     @Published public private(set) var livePhotosInProgress: Int = 0
-    @Published public private(set) var availableFrontCameras: [Camera] = []
-    @Published public private(set) var availableBackCameras: [Camera] = []
     @Published public private(set) var bodyPosition: BodyPosition = .back
     @Published public private(set) var currentCamera: AVCaptureDevice?
-    @Published public private(set) var configurationError: ConfigurationError?
+    @Published public private(set) var state: SessionState = .idle
     @Published public private(set) var livePhotos: Toggle?
     @Published public private(set) var flash: AutoToggle?
+    @Published public private(set) var dimensions: CMVideoDimensions?
     @Published public private(set) var sessionInterruption: SessionInterruption?
+    @Published public private(set) var videoOrientation: AVCaptureVideoOrientation = .portrait
 
     // MARK: - Private Properties
 
@@ -42,65 +45,102 @@ public final class CaptureSession: NSObject {
     private let backCameraDiscovery: AVCaptureDevice.DiscoverySession
     private let photoOutput = AVCapturePhotoOutput()
     private let passthroughSubject: PassthroughSubject<CapturedPhoto, Never>
+    private let orientationObserver: OrientationObserver
     private var processors: [Int64: PhotoProcessor] = [:]
     private var currentInput: AVCaptureDeviceInput?
     private var currentCameraSubscriptions = Set<AnyCancellable>()
     private var sessionSubscriptions = Set<AnyCancellable>()
+    private var lifetimeSubscriptions = Set<AnyCancellable>()
 
     // MARK: - Init / Deinit
 
     public init(options: Options = .default) {
         precondition(!options.modes.isEmpty, "You must provide at least one mode.")
+        precondition(!options.interfaceOrientations.isEmpty, "You must provide at least one supported interface orientation.")
         self.options = options
         mode = options.modes.first!
         preview = PreviewViewController(supportedOrientations: options.interfaceOrientations)
         let subject = PassthroughSubject<CapturedPhoto, Never>()
         passthroughSubject = subject
-        publisher = passthroughSubject.eraseToAnyPublisher()
-        frontCameraDiscovery = AVCaptureDevice.DiscoverySession(
+        photoPublisher = passthroughSubject.eraseToAnyPublisher()
+        let frontCameraDiscovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: options.preferredFrontCameras.map(\.deviceType),
             mediaType: .video,
             position: .front
         )
-        backCameraDiscovery = AVCaptureDevice.DiscoverySession(
+        let backCameraDiscovery = AVCaptureDevice.DiscoverySession(
             deviceTypes: options.preferredBackCameras.map(\.deviceType),
             mediaType: .video,
             position: .back
         )
-        super.init()
+        self.frontCameraDiscovery = frontCameraDiscovery
+        self.backCameraDiscovery = backCameraDiscovery
         availableFrontCameras = frontCameraDiscovery.devices.compactMap { $0.cameraType }
         availableBackCameras = backCameraDiscovery.devices.compactMap { $0.cameraType }
+
+        orientationObserver = OrientationObserver(
+            applicationMotionManager: options.applicationMotionManager
+        )
+        super.init()
+
+        orientationObserver
+            .receive(on: queue)
+            .map { $0.videoOrientation }
+            .assign(to: \.videoOrientation, on: self)
+            .store(in: &lifetimeSubscriptions)
+
+        NotificationCenter.default
+            .publisher(for: .AVCaptureSessionRuntimeError, object: session)
+            .receive(on: queue)
+            .sink { [weak self] note in self?.handleRuntimeError_queued(note) }
+            .store(in: &lifetimeSubscriptions)
+
     }
 
     // MARK: - Public Methods
 
     public func start() {
-        assert(OperationQueue.isMain)
-
-        if authorizer.existingAuthorization.isFullyAuthorized {
-            authorizationCheckPassed()
-        } else {
-            authorizer.requestAccess { [weak self] updatedAuthorization in
-                if updatedAuthorization.isFullyAuthorized {
-                    self?.authorizationCheckPassed()
+        queue.asap {
+            self.state = .starting
+            OperationQueue.main.addOperation {
+                self.orientationObserver.start()
+                if self.authorizer.existingAuthorization.isFullyAuthorized {
+                    self.authorizationCheckPassed()
                 } else {
-                    self?.configurationError = .unauthorized
+                    self.authorizer.requestAccess { [weak self] updatedAuthorization in
+                        if updatedAuthorization.isFullyAuthorized {
+                            self?.authorizationCheckPassed()
+                        } else {
+                            self?.state = .error(.unauthorized)
+                        }
+                    }
                 }
             }
         }
     }
 
+    public func pause() {
+        orientationObserver.stop()
+        queue.asap {
+            guard case .running = self.state else { return }
+            self.state = .paused
+            self.session.stopRunning()
+        }
+    }
+
     public func resume() {
-        // stuf
+        orientationObserver.start()
+        queue.asap {
+            guard case .paused = self.state else { return }
+            self.state = .running
+            self.session.startRunning()
+        }
     }
 
     public func stop() {
+        orientationObserver.stop()
         queue.asap {
-            self.sessionSubscriptions.removeAll()
-            self.currentCameraSubscriptions.removeAll()
-            self.currentCamera = nil
-            self.currentInput = nil
-            self.session.stopRunning()
+            self.endSession_queued(state: .idle)
         }
     }
 
@@ -152,9 +192,8 @@ public final class CaptureSession: NSObject {
 
     public func capturePhoto() {
         assert(OperationQueue.isMain)
-        let orientation = UIDevice.current.videoPreviewOrientation
         queue.addOperation { [weak self] in
-            self?.capturePhoto_queued(overrideOrientation: orientation)
+            self?.capturePhoto_queued()
         }
     }
 
@@ -167,16 +206,24 @@ public final class CaptureSession: NSObject {
 
         queue.addOperation { [weak self] in
             guard let self = self else { return }
+            switch self.state {
+            case .running, .paused:
+                assertionFailure("Must not call `start` on a CaptureSession that's already running.")
+                return
+            case .idle, .starting, .error:
+                break
+            }
             do {
                 try self.performInitialSessionConfiguration_queued()
+                self.state = .running
                 self.session.startRunning()
             } catch {
-                self.configurationError = (error as! ConfigurationError)
+                self.state = .error(error as! SessionError)
             }
         }
     }
 
-    /// - throws: ConfigurationError
+    /// - throws: SessionError
     private func performInitialSessionConfiguration_queued() throws {
         assert(queue.isCurrent)
 
@@ -188,7 +235,7 @@ public final class CaptureSession: NSObject {
         }()
 
         guard let videoDevice = firstAvailableVideoDevice else {
-            throw ConfigurationError.noCameraFound
+            throw SessionError.noCameraFound
         }
 
         session.beginConfiguration()
@@ -210,6 +257,14 @@ public final class CaptureSession: NSObject {
         }
 
         NotificationCenter.default
+            .publisher(for: .AVCaptureInputPortFormatDescriptionDidChange)
+            .receive(on: queue)
+            .sink { [weak self] _ in
+                self?.inputPortFormatDescriptionChanged_queued()
+            }
+            .store(in: &sessionSubscriptions)
+
+        NotificationCenter.default
             .publisher(for: .AVCaptureSessionWasInterrupted)
             .receive(on: queue)
             .sink { [weak self] note in
@@ -222,9 +277,10 @@ public final class CaptureSession: NSObject {
             .receive(on: queue)
             .sink { [weak self] _ in self?.sessionInterruptionEnded_queued() }
             .store(in: &sessionSubscriptions)
+
     }
 
-    /// - throws: ConfigurationError
+    /// - throws: SessionError
     private func addVideoInput_queued(videoDevice: AVCaptureDevice) throws {
         assert(queue.isCurrent)
 
@@ -233,11 +289,11 @@ public final class CaptureSession: NSObject {
         do {
             videoInput = try AVCaptureDeviceInput(device: videoDevice)
         } catch {
-            throw ConfigurationError.unableToAddVideoInput(error)
+            throw SessionError.unableToAddVideoInput(error)
         }
 
         guard session.canAddInput(videoInput) else {
-            throw ConfigurationError.unableToAddVideoInput(nil)
+            throw SessionError.unableToAddVideoInput(nil)
         }
 
         session.addInput(videoInput)
@@ -268,11 +324,11 @@ public final class CaptureSession: NSObject {
         }
     }
 
-    /// - throws: ConfigurationError
+    /// - throws: SessionError
     private func addAudioInput_queued() throws {
 
         guard let microphone = AVCaptureDevice.default(for: .audio) else {
-            throw ConfigurationError.noMicrophoneFound
+            throw SessionError.noMicrophoneFound
         }
 
         let audioInput: AVCaptureDeviceInput
@@ -280,22 +336,22 @@ public final class CaptureSession: NSObject {
         do {
             audioInput = try AVCaptureDeviceInput(device: microphone)
         } catch {
-            throw ConfigurationError.unableToAddAudioInput(error)
+            throw SessionError.unableToAddAudioInput(error)
         }
 
         guard session.canAddInput(audioInput) else {
-            throw ConfigurationError.unableToAddAudioInput(nil)
+            throw SessionError.unableToAddAudioInput(nil)
         }
 
         session.addInput(audioInput)
     }
 
-    /// - throws: ConfigurationError
+    /// - throws: SessionError
     private func addPhotoOutput_queued() throws {
         assert(queue.isCurrent)
 
         guard session.canAddOutput(photoOutput) else {
-            throw ConfigurationError.unableToAddPhotoOutput(nil)
+            throw SessionError.unableToAddPhotoOutput(nil)
         }
 
         session.addOutput(photoOutput)
@@ -317,21 +373,21 @@ public final class CaptureSession: NSObject {
         }
     }
 
-    /// - throws: ConfigurationError
+    /// - throws: SessionError
     private func addVideoOutput_queued() throws {
         assert(queue.isCurrent)
         assertionFailure("Video recording is not yet supported.")
-        throw ConfigurationError.unableToAddVideoInput(nil)
+        throw SessionError.unableToAddVideoInput(nil)
     }
 
     // MARK: - Private Methods (Photo Capture)
 
-    private func capturePhoto_queued(overrideOrientation: AVCaptureVideoOrientation) {
+    private func capturePhoto_queued() {
         assert(queue.isCurrent)
 
         guard let camera = currentCamera else { return }
 
-        photoOutput.connection(with: .video)?.videoOrientation = overrideOrientation
+        photoOutput.connection(with: .video)?.videoOrientation = videoOrientation
 
         let options = AVCapturePhotoSettings.Options(
             livePhotos: livePhotos,
@@ -347,7 +403,7 @@ public final class CaptureSession: NSObject {
 
         let processor = PhotoProcessor(
             settings: settings,
-            userOrientation: overrideOrientation,
+            userOrientation: videoOrientation,
             callbackQueue: queue,
             uponWillCapture: { [weak self] in
                 self?.photoCaptureItems.append(item)
@@ -422,6 +478,14 @@ public final class CaptureSession: NSObject {
         )
     }
 
+    // MARK: - Private Methods (Format Changes)
+
+    private func inputPortFormatDescriptionChanged_queued() {
+        assert(queue.isCurrent)
+        guard let format = currentInput?.ports.first?.formatDescription else { return }
+        dimensions = CMVideoFormatDescriptionGetDimensions(format)
+    }
+
     // MARK: - Private Methods (Session Interruptions)
 
     private func sessionInterruptionBegan_queued(notification: Notification) {
@@ -431,6 +495,33 @@ public final class CaptureSession: NSObject {
 
     private func sessionInterruptionEnded_queued() {
         assert(queue.isCurrent)
+        sessionInterruption = nil
+    }
+
+    // MARK: - Private Methods (Runtime Errors)
+
+    private func handleRuntimeError_queued(_ notification: Notification) {
+        assert(queue.isCurrent)
+        let error = notification.userInfo?[AVCaptureSessionErrorKey] as? Error
+        endSession_queued(state: .error(.runtimeError(error)))
+    }
+
+    private func endSession_queued(state: SessionState) {
+        assert(queue.isCurrent)
+        if session.isRunning {
+            session.stopRunning()
+        }
+        self.state = state
+        sessionSubscriptions.removeAll()
+        currentCameraSubscriptions.removeAll()
+        currentCamera = nil
+        currentInput = nil
+        livePhotosInProgress = 0
+        photoCaptureItems.removeAll()
+        bodyPosition = .back
+        flash = nil
+        livePhotos = nil
+        dimensions = nil
         sessionInterruption = nil
     }
 

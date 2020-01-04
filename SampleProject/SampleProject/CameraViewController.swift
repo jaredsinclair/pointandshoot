@@ -16,6 +16,7 @@ class CameraViewController: UIViewController {
     @IBOutlet var thumbnail: UIImageView!
     @IBOutlet var activityIndicator: UIActivityIndicatorView!
     @IBOutlet var focusReticle: UIView!
+    @IBOutlet var cameraButton: UIButton!
     @IBOutlet var pauseButton: UIButton!
     @IBOutlet var resumeButton: UIButton!
     @IBOutlet var previewContainer: UIView!
@@ -85,6 +86,27 @@ class CameraViewController: UIViewController {
             .sink { [weak self] capture in
                 PHPhotoLibrary.save(capture)
                 self?.thumbnail.image = capture.previewImage
+            }
+            .store(in: &subscriptions)
+
+        session.$state
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] state in
+                guard let self = self else { return }
+                switch state {
+                case .paused:
+                    self.pauseButton.isEnabled = false
+                    self.resumeButton.isEnabled = true
+                    self.cameraButton.isEnabled = false
+                case .running:
+                    self.pauseButton.isEnabled = true
+                    self.resumeButton.isEnabled = false
+                    self.cameraButton.isEnabled = true
+                case .idle, .starting, .error:
+                    self.pauseButton.isEnabled = false
+                    self.resumeButton.isEnabled = false
+                    self.cameraButton.isEnabled = false
+                }
             }
             .store(in: &subscriptions)
 

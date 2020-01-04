@@ -132,6 +132,7 @@ public final class CaptureSession: NSObject {
         orientationObserver.start()
         queue.asap {
             guard case .paused = self.state else { return }
+            self.state = .running
             self.session.startRunning()
         }
     }

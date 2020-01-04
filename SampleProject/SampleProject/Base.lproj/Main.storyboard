@@ -61,16 +61,41 @@
                                     <constraint firstAttribute="width" constant="88" id="r5R-z1-g4q"/>
                                 </constraints>
                             </imageView>
+                            <stackView opaque="NO" contentMode="scaleToFill" distribution="equalSpacing" spacing="80" translatesAutoresizingMaskIntoConstraints="NO" id="Rae-uG-34X">
+                                <rect key="frame" x="113" y="433" width="188" height="30"/>
+                                <subviews>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="5ma-Gn-qO1">
+                                        <rect key="frame" x="0.0" y="0.0" width="48" height="30"/>
+                                        <state key="normal" title="PAUSE">
+                                            <color key="titleColor" systemColor="systemPinkColor" red="1" green="0.1764705882" blue="0.33333333329999998" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <connections>
+                                            <action selector="pause:" destination="QpE-c5-KMi" eventType="touchUpInside" id="HfM-GK-jy6"/>
+                                        </connections>
+                                    </button>
+                                    <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="JUX-Yt-qQ0">
+                                        <rect key="frame" x="128" y="0.0" width="60" height="30"/>
+                                        <state key="normal" title="RESUME">
+                                            <color key="titleColor" systemColor="systemGreenColor" red="0.20392156859999999" green="0.78039215689999997" blue="0.34901960780000002" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                        </state>
+                                        <connections>
+                                            <action selector="resume:" destination="QpE-c5-KMi" eventType="touchUpInside" id="9o6-XC-SxN"/>
+                                        </connections>
+                                    </button>
+                                </subviews>
+                            </stackView>
                         </subviews>
                         <color key="backgroundColor" white="0.0" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <gestureRecognizers/>
                         <constraints>
                             <constraint firstItem="XlM-oS-UyA" firstAttribute="centerX" secondItem="1xw-vI-eBI" secondAttribute="centerX" id="9jf-lo-w2L"/>
                             <constraint firstItem="XlM-oS-UyA" firstAttribute="top" secondItem="1xw-vI-eBI" secondAttribute="top" id="CFO-bP-ogm"/>
+                            <constraint firstItem="Rae-uG-34X" firstAttribute="centerX" secondItem="1xw-vI-eBI" secondAttribute="centerX" id="IhF-A0-QDj"/>
                             <constraint firstItem="azd-1H-vst" firstAttribute="centerX" secondItem="1xw-vI-eBI" secondAttribute="centerX" id="Nwa-DX-PDW"/>
                             <constraint firstItem="1xw-vI-eBI" firstAttribute="bottom" secondItem="wRV-Dd-fFH" secondAttribute="bottom" id="OFL-1x-px0"/>
                             <constraint firstItem="XlM-oS-UyA" firstAttribute="width" secondItem="0DP-29-b6L" secondAttribute="width" id="PHd-H6-TL3"/>
                             <constraint firstItem="wRV-Dd-fFH" firstAttribute="top" secondItem="XlM-oS-UyA" secondAttribute="bottom" id="PMa-X2-QQV"/>
+                            <constraint firstItem="Rae-uG-34X" firstAttribute="top" secondItem="XlM-oS-UyA" secondAttribute="bottom" constant="9" id="Vn3-5L-ZjY"/>
                             <constraint firstItem="ROg-uv-5W6" firstAttribute="centerX" secondItem="0DP-29-b6L" secondAttribute="left" id="sbU-z9-pHs"/>
                             <constraint firstItem="ROg-uv-5W6" firstAttribute="centerY" secondItem="0DP-29-b6L" secondAttribute="top" id="xYH-nA-kqr"/>
                         </constraints>

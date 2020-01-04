@@ -59,7 +59,15 @@ extension CaptureSession {
         case finished
     }
 
-    public enum ConfigurationError: Swift.Error {
+    public enum SessionState {
+        case idle
+        case starting
+        case running
+        case paused
+        case error(SessionError)
+    }
+
+    public enum SessionError: Swift.Error {
         case unauthorized
         case noCameraFound
         case noMicrophoneFound

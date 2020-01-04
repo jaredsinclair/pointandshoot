@@ -16,6 +16,8 @@ class CameraViewController: UIViewController {
     @IBOutlet var thumbnail: UIImageView!
     @IBOutlet var activityIndicator: UIActivityIndicatorView!
     @IBOutlet var focusReticle: UIView!
+    @IBOutlet var pauseButton: UIButton!
+    @IBOutlet var resumeButton: UIButton!
     @IBOutlet var previewContainer: UIView!
     @IBOutlet var previewHeight: NSLayoutConstraint!
     @IBOutlet var focusReticleCenterX: NSLayoutConstraint!
@@ -78,7 +80,7 @@ class CameraViewController: UIViewController {
         // order to receive photos as they're captured. This sample app uses a
         // convenient extension method on PHPhotoLibrary to save each capture to
         // the user's camera roll.
-        session.publisher
+        session.photoPublisher
             .receive(on: DispatchQueue.main)
             .sink { [weak self] capture in
                 PHPhotoLibrary.save(capture)
@@ -97,6 +99,14 @@ class CameraViewController: UIViewController {
 
     @IBAction func takePhoto(_ sender: UIButton) {
         session.capturePhoto()
+    }
+
+    @IBAction func pause(_ sender: Any) {
+        session.pause()
+    }
+
+    @IBAction func resume(_ sender: Any) {
+        session.resume()
     }
 
     @IBAction func focusAndExpose(_ sender: UITapGestureRecognizer) {
